@@ -37,7 +37,7 @@ async function run() {
             res.send(result)
         })
 
-        //-------------------add Job-------------------------------------------
+        //-------------------add Job------------------------------------------
         app.post('/allJobs', async (req, res) => {
             const newJob = req.body
             // console.log(newJob)
