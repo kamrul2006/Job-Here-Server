@@ -67,7 +67,35 @@ async function run() {
             const newApply = req.body
             //  console.log(newVisa)
             const result = await ApplyCollection.insertOne(newApply)
+
+            //-not the best way to get the application count
+            const id = newApply.job_id
+            const query = { _id: new ObjectId(id) }
+            const job = await JobCollection.findOne(query)
+
+            console.log(job)
+
+            let jobCount = 0
+
+            if (job.applyCount == true) {
+                jobCount = job.applyCount + 1
+            }
+            else {
+                jobCount = 1
+            }
+
+            //---updating the job count
+            const filter = { _id: new ObjectId(id) }
+            const updatedDoc = {
+                $set: {
+                    applyCount: jobCount
+                }
+            }
+
+            const updatedResult = await JobCollection.updateOne(filter, updatedDoc)
+
             res.send(result)
+
         })
 
         //---------------------------Showing all Apply------------------------
@@ -91,6 +119,31 @@ async function run() {
             const result = await ApplyCollection.findOne(query)
             res.send(result)
         })
+
+        //---------------------------Get apply by ID to show users-----------------------
+        app.get('/apply/applicant/:job_id', async (req, res) => {
+            const id = req.params.job_id
+            //  console.log(id)
+            const query = { job_id: id }
+            const result = await ApplyCollection.find(query).toArray()
+            res.send(result)
+        })
+
+        //---------------------------Get apply by ID-----------------------
+        app.patch('/apply/:id', async (req, res) => {
+            const id = req.params.id
+            const data = req.body.status
+            //  console.log(id)
+            const query = { _id: new ObjectId(id) }
+            const updatedDoc = {
+                $set: {
+                    status: data
+                }
+            }
+            const result = await ApplyCollection.updateOne(query, updatedDoc)
+            res.send(result)
+        })
+
 
 
 
