@@ -10,36 +10,36 @@ const port = process.env.PORT || 5000
 
 // --------------------middle ware-------------------------
 app.use(cors({
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173',],
     credentials: true
 }))
 app.use(express.json());
 app.use(cookieParser());
 
-// ------------------------------------------
-const logger = (req, res, next) => {
-    console.log('inside the logger')
-    next()
-}
+// // ------------------------------------------
+// const logger = (req, res, next) => {
+//     console.log('inside the logger')
+//     next()
+// }
 
-const tokenVerify = (req, res, next) => {
-    const token = req?.cookies?.token
-    console.log('inside the tokenVerify part')
+// const tokenVerify = (req, res, next) => {
+//     const token = req?.cookies?.token
+//     console.log('inside the tokenVerify part', token)
 
-    if (!token) {
-        return res.status(401).send({ massage: "Unauthorized access" })
-    }
+//     if (!token) {
+//         return res.status(401).send({ massage: "Unauthorized access" })
+//     }
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-        if (err) {
-            console.error('JWT Verification Error:', err.message);
-            return res.status(403).send({ message: "Forbidden: Invalid or Expired Token" });
-        }
-        req.user = decoded;
-        next();
-    });
+//     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+//         if (err) {
+//             console.error('JWT Verification Error:', err.message);
+//             return res.status(403).send({ message: "Forbidden: Invalid or Expired Token" });
+//         }
+//         req.user = decoded;
+//         next();
+//     });
 
-}
+// }
 
 // ----------------connecting MONGO db---------------------------
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.8jqou.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -56,8 +56,8 @@ async function run() {
     try {
 
         // ---------------creating DATA BASE ON MONGO DB----------------------
-        const JobCollection = client.db("JobDB").collection('All-Jobs')
-        const ApplyCollection = client.db("JobDB").collection('All-Apply')
+        const HistoCollection = client.db("CraftDB").collection('All-Crafts')
+        // const ApplyCollection = client.db("JobDB").collection('All-Apply')
 
         // ---auth related Apis-------------------------------
         app.post('/jwt', async (req, res) => {
@@ -66,37 +66,46 @@ async function run() {
             res
                 .cookie('token', token, {
                     httpOnly: true,
-                    secure: false,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: process.env.NODE_ENV === 'production' ? "none" : "strict"
                 })
                 // .send(token)
                 .send({ success: true })
         })
 
+        app.post('/logout', (req, res) => {
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? "none" : "strict"
+            }).send({ tokenRemoved: true })
+        })
 
-        //---------------------------Showing all jobs------------------------
-        app.get('/allJobs', async (req, res) => {
+
+        //---------------------------Showing all craft------------------------
+        app.get('/allCraft', async (req, res) => {
             // console.log('inside all jobs')
-            const cursor = JobCollection.find()
+            const cursor = HistoCollection.find()
             const result = await cursor.toArray()
             res.send(result)
         })
 
-        //-------------------add Job------------------------------------------
-        app.post('/allJobs', async (req, res) => {
-            const newJob = req.body
-            // console.log(newJob)
-            const result = await JobCollection.insertOne(newJob)
-            res.send(result)
-        })
+        // //-------------------add Craft------------------------------------------
+        // app.post('/allCraft', async (req, res) => {
+        //     const newCraft = req.body
+        //     // console.log(newJob)
+        //     const result = await HistoCollection.insertOne(newCraft)
+        //     res.send(result)
+        // })
 
-        //---------------------------Get Job by ID-----------------------------
-        app.get('/allJobs/:id', async (req, res) => {
-            const id = req.params.id
-            // console.log(id)
-            const query = { _id: new ObjectId(id) }
-            const result = await JobCollection.findOne(query)
-            res.send(result)
-        })
+        // //---------------------------Get craft by ID-----------------------------
+        // app.get('/allCraft/:id', async (req, res) => {
+        //     const id = req.params.id
+        //     // console.log(id)
+        //     const query = { _id: new ObjectId(id) }
+        //     const result = await HistoCollection.findOne(query)
+        //     res.send(result)
+        // })
 
 
 
@@ -106,99 +115,100 @@ async function run() {
 
 
 
-        //-------------------add Apply-----------------------------------------
-        app.post('/apply', async (req, res) => {
-            const newApply = req.body
-            //  console.log(newVisa)
-            const result = await ApplyCollection.insertOne(newApply)
+        // //-------------------add Apply-----------------------------------------
+        // app.post('/apply', async (req, res) => {
+        //     const newApply = req.body
+        //     //  console.log(newVisa)
+        //     const result = await ApplyCollection.insertOne(newApply)
 
-            //-not the best way to get the application count
-            const id = newApply.job_id
-            const query = { _id: new ObjectId(id) }
-            const job = await JobCollection.findOne(query)
+        //     //-not the best way to get the application count
+        //     const id = newApply.job_id
+        //     const query = { _id: new ObjectId(id) }
+        //     const job = await HistoCollection.findOne(query)
 
-            console.log(job)
+        //     console.log(job)
 
-            let jobCount = 0
+        //     let jobCount = 0
 
-            if (job.applyCount == true) {
-                jobCount = job.applyCount + 1
-            }
-            else {
-                jobCount = 1
-            }
+        //     if (job.applyCount) {
+        //         jobCount = job.applyCount + 1
+        //     }
+        //     else {
+        //         jobCount = 1
+        //     }
 
-            //---updating the job count
-            const filter = { _id: new ObjectId(id) }
-            const updatedDoc = {
-                $set: {
-                    applyCount: jobCount
-                }
-            }
+        //     //---updating the job count
+        //     const filter = { _id: new ObjectId(id) }
+        //     const updatedDoc = {
+        //         $set: {
+        //             applyCount: jobCount
+        //         }
+        //     }
 
-            const updatedResult = await JobCollection.updateOne(filter, updatedDoc)
+        //     const updatedResult = await HistoCollection.updateOne(filter, updatedDoc)
 
-            res.send(result)
+        //     res.send(result)
 
-        })
+        // })
 
-        //---------------------------Showing all Apply------------------------
-        app.get('/apply', tokenVerify, async (req, res) => {
-            const QEmail = req.query.email
-            const query = { email: QEmail }
+        // //---------------------------Showing all Apply------------------------
+        // app.get('/apply', tokenVerify, async (req, res) => {
+        //     const QEmail = req.query.email
+        //     const query = { email: QEmail }
 
-            console.log(QEmail)
-            // console.log(req.user.email.email)
+        //     // console.log(QEmail)
+        //     // console.log(req.user.email)
 
-            if (req.user.email.email !== req.query.email) {
-                return res.status(403).send({ massage: "forbidden" })
-            }
+        //     if (req.user.email !== req.query.email) {
+        //         return res.status(403).send({ massage: "forbidden" })
+        //     }
 
-            const cursor = await ApplyCollection.find(query).toArray()
-            // const result = cursor
-            // console.log(cursor)
-            res.send(cursor)
-        })
+        //     const cursor = await ApplyCollection.find(query).toArray()
+        //     // const result = cursor
+        //     // console.log(cursor)
+        //     res.send(cursor)
+        // })
 
-        //---------------------------Get apply by ID-----------------------
-        app.get('/apply/:id', async (req, res) => {
-            const id = req.params.id
-            //  console.log(id)
-            const query = { _id: new ObjectId(id) }
-            const result = await ApplyCollection.findOne(query)
-            res.send(result)
-        })
+        // //---------------------------Get apply by ID-----------------------
+        // app.get('/apply/:id', async (req, res) => {
+        //     const id = req.params.id
+        //     //  console.log(id)
+        //     const query = { _id: new ObjectId(id) }
+        //     const result = await ApplyCollection.findOne(query)
+        //     res.send(result)
+        // })
 
-        //---------------------------Get apply by ID to show users-----------------------
-        app.get('/apply/applicant/:job_id', async (req, res) => {
-            const id = req.params.job_id
-            //  console.log(id)
-            const query = { job_id: id }
-            const result = await ApplyCollection.find(query).toArray()
-            res.send(result)
-        })
+        // //---------------------------Get apply by ID to show users-----------------------
+        // app.get('/apply/applicant/:job_id', async (req, res) => {
+        //     const id = req.params.job_id
+        //     //  console.log(id)
+        //     const query = { job_id: id }
+        //     const result = await ApplyCollection.find(query).toArray()
+        //     res.send(result)
+        // })
 
-        //---------------------------Get apply by ID-----------------------
-        app.patch('/apply/:id', async (req, res) => {
-            const id = req.params.id
-            const data = req.body.status
-            //  console.log(id)
-            const query = { _id: new ObjectId(id) }
-            const updatedDoc = {
-                $set: {
-                    status: data
-                }
-            }
-            const result = await ApplyCollection.updateOne(query, updatedDoc)
-            res.send(result)
-        })
-
-
+        // //---------------------------Get apply by ID-----------------------
+        // app.patch('/apply/:id', async (req, res) => {
+        //     const id = req.params.id
+        //     const data = req.body.status
+        //     //  console.log(id)
+        //     const query = { _id: new ObjectId(id) }
+        //     const updatedDoc = {
+        //         $set: {
+        //             status: data
+        //         }
+        //     }
+        //     const result = await ApplyCollection.updateOne(query, updatedDoc)
+        //     res.send(result)
+        // })
 
 
-        await client.db("admin").command({ ping: 1 });
+
+
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
+
     }
 }
 run().catch(console.dir);
@@ -208,7 +218,7 @@ run().catch(console.dir);
 
 // -----------------------get the root rout----------------
 app.get("/", (req, res) => {
-    res.send('JOB IS FALLING FROM THE SKY.')
+    res.send('All the history are here.')
 })
 
 // -----------------------running on port---------------------
